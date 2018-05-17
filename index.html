@@ -1,0 +1,179 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+		<title>Zenith Web Engine</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<link href="css/ze-core.css" rel="stylesheet" type="text/css" />
+		<script type="text/javascript" src="js/three.js"></script>
+		<script type="text/javascript" src="js/dat.gui.js"></script>
+		<script type="text/javascript" src="js/ze-core.js"></script>
+    </head>
+    <body>
+	
+	
+    <script type="text/javascript">
+        var cameraCube, sceneCube;
+        var sphere_1_mesh = 0;
+        var sphere_2_mesh = 0;
+        var cylinder_mesh_1 = 0;
+        var cylinder_mesh_2 = 0;
+
+        var mass_1 = 30.0;
+        var mass_2 = 20.0;
+        var theta_1 = 30 / 180 * Math.PI;
+        var theta_2 = 45 / 180 * Math.PI;
+        var d2_theta1 = 0;
+        var d2_theta2 = 0;
+        var d_theta1 = 0;
+        var d_theta2 = 0;
+        var length_1 = 8000;
+        var length_2 = 2000;
+
+        var g = 9.8;
+        var time = 0.5;
+
+		
+        document.addEventListener("DOMContentLoaded", start_app, false);
+
+        function start_app() {
+            init();
+            zeCoreAnimate();
+        }
+
+        function init() {
+
+			zeCoreInit();
+
+			zeCore.onAfterFrameMove = frameMove;
+			zeCore.onBeforeFrameRender = frameRender;
+
+            cameraCube = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 100000);
+
+            sceneCube = new THREE.Scene();
+
+            var geometry = new THREE.SphereGeometry(100, 32, 16);
+
+            var path = "textures/";
+            var format = '.png';
+            var urls = [
+                path + 'px' + format, path + 'nx' + format,
+                path + 'py' + format, path + 'ny' + format,
+                path + 'pz' + format, path + 'nz' + format
+            ];
+
+            var textureCube = THREE.ImageUtils.loadTextureCube(urls);
+
+            var material_1 = new THREE.MeshBasicMaterial({
+                color: 0xffff00,
+                envMap: textureCube
+            });
+            sphere_mesh_1 = new THREE.Mesh(geometry, material_1);
+            sphere_mesh_1.position.x = sphere_mesh_1.position.y = sphere_mesh_1.position.z = 0;
+            sphere_mesh_1.scale.x = sphere_mesh_1.scale.y = sphere_mesh_1.scale.z = 5;
+            zeCore.scene.add(sphere_mesh_1);
+
+            var material_2 = new THREE.MeshBasicMaterial({
+                color: 0xff9999,
+                envMap: textureCube
+            });
+            sphere_mesh_2 = new THREE.Mesh(geometry, material_2);
+            sphere_mesh_2.position.x = sphere_mesh_2.position.y = sphere_mesh_2.position.z = 0;
+            sphere_mesh_2.scale.x = sphere_mesh_2.scale.y = sphere_mesh_2.scale.z = 5;
+            zeCore.scene.add(sphere_mesh_2);
+
+            var cylinder_material = new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
+                envMap: textureCube
+            });
+
+            var cylinder_geometry_1 = new THREE.CylinderGeometry(100, 100, length_1, 50, 50, false);
+            cylinder_mesh_1 = new THREE.Mesh(cylinder_geometry_1, cylinder_material);
+            cylinder_geometry_1.applyMatrix(new THREE.Matrix4().makeTranslation(0, -length_1 / 2, 0));
+            scene.add(cylinder_mesh_1);
+
+            var cylinder_geometry_2 = new THREE.CylinderGeometry(100, 100, length_2, 50, 50, false);
+            cylinder_mesh_2 = new THREE.Mesh(cylinder_geometry_2, cylinder_material);
+            cylinder_geometry_2.applyMatrix(new THREE.Matrix4().makeTranslation(0, -length_2 / 2, 0));
+            scene.add(cylinder_mesh_2);
+
+            var shader = THREE.ShaderLib["cube"];
+            shader.uniforms["tCube"].value = textureCube;
+            var material = new THREE.ShaderMaterial({
+                fragmentShader: shader.fragmentShader,
+                vertexShader: shader.vertexShader,
+                uniforms: shader.uniforms,
+                depthWrite: false,
+                side: THREE.BackSide
+            });
+            mesh = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), material);
+            sceneCube.add(mesh);
+            var gui = new dat.GUI();
+
+            gui.add(this, 'mass_1', 1, 50).name("Mass 1").onChange(function (value) {
+                 d2_theta1 = d2_theta2 = d_theta1 = d_theta2 = 0;
+            });
+            gui.add(this, 'mass_2', 1, 50).name("Mass 2").onChange(function (value) {
+                 d2_theta1 = d2_theta2 = d_theta1 = d_theta2 = 0;
+            });
+            gui.add(this, 'theta_1', -90 / 180 * Math.PI, 90 / 180 * Math.PI).name("Theta 1").onChange(function (value) {
+                 d2_theta1 = d2_theta2 = d_theta1 = d_theta2 = 0;
+            });
+            gui.add(this, 'theta_2', -90 / 180 * Math.PI, 90 / 180 * Math.PI).name("Theta 2").onChange(function (value) {
+                 d2_theta1 = d2_theta2 = d_theta1 = d_theta2 = 0;
+             });
+
+             window.addEventListener('resize', onWindowResize, false);
+
+
+         }
+
+        function onWindowResize() {
+            cameraCube.aspect = window.innerWidth / window.innerHeight;
+            cameraCube.updateProjectionMatrix();
+        }
+
+        function frameMove() {
+            mu = 1 + mass_1 / mass_2;
+            d2_theta1 = (g * (Math.sin(theta_2) * Math.cos(theta_1 - theta_2) - mu * Math.sin(theta_1)) - (length_2 * d_theta2 * d_theta2 + length_1 * d_theta1 * d_theta1 * Math.cos(theta_1 - theta_2)) * Math.sin(theta_1 - theta_2)) / (length_1 * (mu - Math.cos(theta_1 - theta_2) * Math.cos(theta_1 - theta_2)));
+            d2_theta2 = (mu * g * (Math.sin(theta_1) * Math.cos(theta_1 - theta_2) - Math.sin(theta_2)) + (mu * length_1 * d_theta1 * d_theta1 + length_2 * d_theta2 * d_theta2 * Math.cos(theta_1 - theta_2)) * Math.sin(theta_1 - theta_2)) / (length_2 * (mu - Math.cos(theta_1 - theta_2) * Math.cos(theta_1 - theta_2)));
+            d_theta1 += d2_theta1 * time;
+            d_theta2 += d2_theta2 * time;
+            theta_1 += d_theta1 * time;
+            theta_2 += d_theta2 * time;
+            var top_offset = length_1;
+            if (sphere_mesh_1) {
+                sphere_mesh_1.position.x = length_1 * Math.sin(theta_1);
+                sphere_mesh_1.position.y = top_offset - length_1 * Math.cos(theta_1);
+                sphere_mesh_1.scale.x = sphere_mesh_1.scale.y = sphere_mesh_1.scale.z = mass_1 / 5.0;
+            }
+            if (sphere_mesh_2) {
+                sphere_mesh_2.position.x = length_1 * Math.sin(theta_1) + length_2 * Math.sin(theta_2);
+                sphere_mesh_2.position.y = top_offset - (length_1 * Math.cos(theta_1) + length_2 * Math.cos(theta_2));
+                sphere_mesh_2.scale.x = sphere_mesh_2.scale.y = sphere_mesh_2.scale.z = mass_2 / 5.0;
+            }
+
+            cylinder_mesh_1.position.x = 0;
+            cylinder_mesh_1.position.y = top_offset;
+            cylinder_mesh_1.position.z = 0;
+            cylinder_mesh_1.rotation.z = theta_1;
+
+            cylinder_mesh_2.position.x = sphere_mesh_1.position.x;
+            cylinder_mesh_2.position.y = sphere_mesh_1.position.y;
+            cylinder_mesh_2.position.z = sphere_mesh_1.position.z;
+            cylinder_mesh_2.rotation.z = theta_2;
+
+            cameraCube.rotation.copy(zeCore.camera.rotation);
+        }
+
+
+        function frameRender() {
+            zeCore.renderer.render(sceneCube, cameraCube);
+        }
+
+
+
+    </script>
+	
+	
+    </body>
+</html>

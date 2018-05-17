@@ -1,0 +1,25 @@
+body {
+	background: black;
+	font-family: Arial, Tahoma, Verdana;
+	font-size: 13px;
+	text-align: center;
+	color: #ddd;
+	overflow: hidden;
+	margin: 0;
+	padding: 0;
+}
+
+a {
+	color: #cdf;
+}
+
+.ze-webgl-error {
+	background: #666;
+	padding: 20px 100px;
+	width: 400px;
+	height: 40px;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	margin: -60px -300px;
+}
